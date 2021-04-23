@@ -1,0 +1,68 @@
+import numpy as np
+import pandas as pd
+import json
+
+with open("Desktop/bipartisan/senate.json", "r") as read_file:
+   senate_raw = json.load(read_file)
+
+## Extract the bioinfo from json
+senatekey= list()
+for i in range(len(senate_raw)):
+    bio= list()
+    id= data[i]['id']
+    first= data[i]['givenName']
+    last=  data[i]['familyName']
+
+    bio.append(id)
+    bio.append(first)
+    bio.append(last)
+
+    for j in data[i]["congresses"]:
+        if j['congressNumber'] == 116:
+            state= j['stateName']
+            party= str(j['parties']).replace('[', '').replace(']', '').replace("'", "")
+            bio.append(state)
+            bio.append(party)
+    key.append(bio)
+
+senate= pd.DataFrame(key).rename(columns= {0: "id", 1: "first", 2:"last", 3: "state", 4: "party"})
+senate.head(5)
+## Check Independent (Bernard and Angus)
+senate[senate.party== "Independent"]
+
+## Adjust the party format
+party= ["R" if "Republican" in i else "D" for i in senate.party]
+senate['party']= party
+
+## Export to csv file
+senate.to_csv("~/Desktop/bipartisan/116th_senate_member.csv")
+
+## Replicate senate's operation to hosue
+with open("Desktop/bipartisan/house.json", "r") as read_file:
+   house_raw = json.load(read_file)
+
+house_key= list()
+for i in range(len(house_raw)):
+    bio= list()
+    id= house_raw[i]['id']
+    first= house_raw[i]['givenName']
+    last=  house_raw[i]['familyName']
+
+    bio.append(id)
+    bio.append(first)
+    bio.append(last)
+
+    for j in house_raw[i]["congresses"]:
+        if j['congressNumber'] == 116:
+            state= j['stateName']
+            party= str(j['parties']).replace('[', '').replace(']', '').replace("'", "")
+            bio.append(state)
+            bio.append(party)
+    house_key.append(bio)
+
+house= pd.DataFrame(house_key).rename(columns= {0: "id", 1: "first", 2:"last", 3: "state", 4: "party"})
+house.to_csv("~/Desktop/bipartisan/116th_house_member.csv")
+
+house.party.unique()
+
+house[house.party== 'Republican, Independent']

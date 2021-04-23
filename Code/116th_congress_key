@@ -1,0 +1,54 @@
+import pandas as pd
+import numpy as np
+
+dat= pd.read_csv("~/Desktop/Senate.csv")
+
+## Combine the given, middle, family name
+name_list= list()
+for i in range(len(dat)):
+    name= str(dat.iloc[i, 1]) + ' ' + str(dat.iloc[i, 3]) + ' ' + str(dat.iloc[i, 2]) + ' ' + str(dat.iloc[i, 10])
+    name= name.replace('nan', '').strip().replace('  ', ' ')
+    name_list.append(name)
+
+dat['name']= name_list
+
+## dat['name']= dat["givenName"] + ' ' + dat["familyName"]
+
+## Adjust the party
+## dat['party']= dat["congresses"].str.split(",", expand= True)[3]
+## party= [i.replace('"parties":["', '').replace('"]}', '').replace(']', '') for i in dat['party']]
+
+## check= ['stateDistrict' in i for i in party]
+## problem= [i for i, x in enumerate(check) if x]
+## for i in problem:
+    ## party_split= dat.iloc[i, 13].split(",")[4]
+    ## party= party_split.replace('"parties":["', '').replace('"]}', '').replace(']', '')
+    ## dat.iloc[i, 15]= party
+
+## dat["party"]= [i.replace('"', '') for i in dat['party']]
+
+dat["congresses"].str.split(",", expand= True)[]
+state = dat["congresses"].str.split(",", expand= True)[2]
+statename= [i.replace('"stateName":', '').replace('"', '') for i in state]
+dat['statename']= statename
+
+## Party affiliation
+party= ["R" if "Republican" in i else "D" for i in dat['congresses']]
+dat["party"]= party
+
+In= ["I" if "Independent" in i else "N"  for i in dat['congresses']]
+check= ["I" for i in In]
+IN_check= [i for i,x in enumerate(check) if x]
+IN_check
+
+
+## house or senate
+position= ['Senate' if "Senator" in i else 'House' for i in dat['congresses']]
+dat['position']= position
+
+
+df= dat[["id", 'givenName', 'familyName', 'statename', 'party']]
+df.to_csv("~/Desktop/bipartisan/116th_senate_member.csv")
+
+
+Senate.to_csv("~/Desktop/bipartisan/116th_senate_member.csv")
