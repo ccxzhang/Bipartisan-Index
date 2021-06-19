@@ -1,4 +1,4 @@
-# Web-scraper
+# Web-scrapers
 
 The Web-scrapers contains: 
 
