@@ -1,0 +1,33 @@
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import requests
+import re
+
+class Content:
+    def __init__(self, url, title, body):
+        self.url= url
+        self.title= title
+        self.body= body
+
+    def getPage(url):
+        page= requests.get(url)
+
+        if page.status_code== 200:
+            return BeautifulSoup(page.content, 'html.parser')
+
+        else:
+            print("The connection is not stable")
+
+    def brookings_scrapyer(url):
+        bs= getPage(url)
+        title = bs.find("h1").text
+        body= bs.find("div", {'class': "post-body"}).text
+        return Content(url, title, body)
+
+url= "https://www.brookings.edu/blog/future-development/2021/06/03/declining-foreign-direct-investment-cant-contribute-much-to-sustainable-development/"
+
+content= brookings_scrapyer(url)
+print(content.title)
+
+
+import scrapy
