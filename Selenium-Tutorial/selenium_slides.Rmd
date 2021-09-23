@@ -1,0 +1,287 @@
+---
+title: "Selenium"
+author: "Charlie Zhang"
+date: "9/20/2021"
+output:
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+Sys.setenv(RETICULATE_PYTHON = "python/bin/python")
+reticulate::py_config()
+knitr::knit_engines$set(python= reticulate:: eng_python)
+```
+
+## Introduction
+- What is Selenium ? \
+  - Selenium provides a simple API to write functional/acceptance tests using Selenium WebDriver.
+
+- When to use Selenium? \
+  - To scrape website page that hide contents; 
+  - To scrape website page that uses Ajax;
+  - To fill in forms, searches, etc.; 
+  - Not to use when there is an automated software detecting mechanism (CAPTCHA)
+ 
+- Disadvantages: \
+  - Can be slow and inefficient
+
+## Classical _Requests_ and _BeautifulSoup_
+Suppose we need to scrape Paraguay's Comptroller General (Contraloría General de la República) \
+- The url is https://portaldjbr.contraloria.gov.py/portal-djbr/ \
+- Here is how the website looks like: 
+
+![](paraguay.png){#id .class width=75% height=75%}
+
+
+## Python Code
+
+```{python}
+# Import packages
+import requests
+from bs4 import BeautifulSoup
+import warnings
+warnings.filterwarnings("ignore")
+
+try: 
+    headers = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
+        }
+    url = "https://portaldjbr.contraloria.gov.py/portal-djbr/"
+    r = requests.get(url, headers= headers)
+    r.status_code 
+except requests.HTTPError as e:
+    print(e)
+    print("HTTPError")
+
+except requests.RequestException as e:
+    print(e)
+
+except:
+    print("Unknown Error!")
+```
+
+## A Simple Example
+Suppose we want to know what are the first-page result of searching `georgetown dspp`: \
+```{python}
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
+# Initiate the driver
+driver = webdriver.Chrome("/Applications/chromedriver")
+url = "https://www.google.com"
+driver.get(url)
+
+## Insert the key value and search
+search = driver.find_element_by_name("q")
+search.send_keys('georgetown dspp')
+search.submit()
+
+## Find the url of each result
+results = driver.find_elements_by_xpath('//div[@class="yuRUbf"]//a[@href]')
+for result in results:
+    print(result.get_attribute("href"))
+
+## Quit the driver
+driver.quit()
+```
+
+## More Practical Scenarios
+```{python}
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from bs4 import BeautifulSoup
+import urllib.request
+import time
+
+
+def getFBpost(id= None, pwd= None, page= None):
+  
+    # Initiate the driver
+    service = Service("/Applications/chromedriver")
+    service.start()
+    driver = webdriver.Remote(service.service_url)
+    driver.get('http://www.facebook.com')
+
+    # Get and insert the email and passport
+    email = driver.find_element_by_id("email")
+    password = driver.find_element_by_id("pass")
+    email.send_keys(id)
+    password.send_keys(pwd)
+    password.submit()
+
+    # Have a glimpse of the page
+    time.sleep(5)
+
+    # Generate and Get the url
+    url = "https://www.facebook.com/" + str(page)
+    driver.get(url)
+
+    # Use JS to execute selenium 
+    for x in range(1, 5):
+        driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+        time.sleep(3)
+
+    # Use bs to get the page content
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    # Get the posts
+    titles = soup.find_all("div", {"class": "kvgmc6g5 cxmmr5t8 oygrvhab hcukyx3x c1et5uql ii04i59q"})
+
+    with open("posts.txt", 'w') as file: 
+      for title in titles:
+          post= title.find('div', {'dir': 'auto'})
+          file.write(post.getText()+ "\n")
+
+    driver.quit()
+ 
+
+```
+
+
+## Cont'd
+```{python}
+with open("id.txt", "r") as f1, open("pwd.txt", "r") as f2:
+  id = str(f1.readlines()[0])
+  pwd = str(f2.readlines()[0])
+
+if __name__ == "__main__":
+    getFBpost(id = id,
+              pwd = pwd,
+              page = "georgetownuniv")
+              
+with open("posts.txt", "r") as file:
+  print(file.readlines()[0])
+              
+```              
+
+## Improve Efficiency through Multithreading
+
+![](stackoverflow.png){#id .class width=75% height=75%} \
+__Selenium can be efficient__! Be sure to include time.sleep() or other functions in your code.
+
+## Original Version
+```{python}
+import requests
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup
+from selenium import webdriver
+import timeit
+
+def getTitle(url = None):
+    
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text,"html")
+    titles = [urljoin(url,items.get("href")) for items in soup.select(".summary .question-hyperlink")]
+    
+    driver= webdriver.Chrome("/Applications/chromedriver")
+    driver.get(titles[0])
+    
+    content = BeautifulSoup(driver.page_source)
+    item = content.select_one("h1 a").text
+    
+    return print(item)
+
+if __name__ == "__main__":
+  url = "https://stackoverflow.com/questions/tagged/web-scraping"
+  getTitle(url= url)           
+```              
+
+I use __%timeit__, and the result is 1.14 s ± 171 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+## Use Multithreading
+```{python}
+import requests
+from urllib.parse import urljoin
+from multiprocessing.pool import ThreadPool, Pool
+from bs4 import BeautifulSoup
+from selenium import webdriver
+import threading
+
+def getLinks(link):
+  r = requests.get(link)
+  soup = BeautifulSoup(r.text,"html")
+  titles = [urljoin(url,items.get("href")) for items in soup.select(".summary .question-hyperlink")]
+  return titles
+
+threadLocal = threading.local()
+
+def setUp():
+  driver = getattr(threadLocal, 'driver', None)
+
+  if driver is None:
+    options = webdriver.ChromeOptions()
+    options.headless= True
+    driver = webdriver.Chrome(options = options)
+    setattr(threadLocal, 'driver', driver)
+
+  return driver
+
+
+def getTitles(url):
+  
+  driver = setUp()
+  driver.get(url)
+
+  content = BeautifulSoup(driver.page_source)
+  item = content.select_one("h1 a").text
+  
+  print(item)
+
+if __name__ == '__main__':
+  url = "https://stackoverflow.com/questions/tagged/web-scraping"
+  ThreadPool(5).map(getTitles,getLinks(url))
+```
+
+## Where I change the code? 
+The run time is 18.723 s, which is at least 3.04 times faster than before. \
+
+- I improve the efficiency: 
+  - by using multithreading;
+  - by setting Chromedriver as headless (`options.headless= True` or `options.add_argument('--headless')`)
+
+## Selenium for Testing
+
+I haven't used Selenium for testing, and it is pretty similar to the code displayed before.
+
+```{python}
+import unittest
+from selenium import webdriver
+
+class SearchText(unittest.TestCase):
+    def setUp(self):
+        # create a new Firefox session
+        self.driver = webdriver.Chrome("/Applications/chromedriver")
+        self.driver.implicitly_wait(30)
+        self.driver.maximize_window()
+        # navigate to the application home page
+        self.driver.get("http://www.google.com/")
+
+    def test_search_by_text(self):
+        # get the search textbox
+        self.search_field = self.driver.find_element_by_name("q")
+
+        # enter search keyword and submit
+        self.search_field.send_keys("Selenium WebDriver Interview questions")
+        self.search_field.submit()
+
+        #get the list of elements which are displayed after the search
+        lists = self.driver.find_elements_by_xpath('//div[@class="yuRUbf"]//a[@href]')
+        self.assertEqual(10, len(lists))
+
+    def tearDown(self):
+        # close the browser window
+        self.driver.quit()
+
+
+if __name__ == '__main__':
+    unittest.main(exit= False)
+```
+
+## Conclusion 
+- I saw "Selenium is a wrong tool for scraping" on stackoverflow. \ 
+- It may be particularly useful under some circumstances.
+- Useful Resources for Selenium: 
+  - [Selenium Documentation](https://selenium-python.readthedocs.io/)

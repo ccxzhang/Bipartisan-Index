@@ -9,3 +9,5 @@ The following scrapers are either part of the project that I did or merely for f
 3. `FBpages`: scraper built on selenium to extract information from Facebook public pages.
 
 4. `Zhihu`: scraper to get answers from Zhihu (Chinese version of Quora) which used Ajax.
+
+5. `Selenium-Tutorial`: presentation slides for Selenium, including the common usages of Selenium.
